@@ -19,7 +19,12 @@ public class ClientCore extends Thread{
 	private Socket socket;
 	private boolean isconnect = false;
 	private TreeMap<Integer, String> files;
-	private static int download_status = 2; //向Client页面反馈下载情况，0，表示正在下载，1表示下载完成，-1表示下载失败,2是默认值，表示还没有开始下载
+	//向Client页面反馈下载情况，0，表示正在下载，1表示下载完成，-1表示下载失败,2开始下载,5是默认值，表示还没有下载任务
+	private static int download_status = 5; 
+	private String dir;//文件保存的路径(来自界面)
+	private String filename;//需要保存的文件
+	private static long fileSize;//下载文件的大小
+	private static int currentFileSize;
 	
 	public ClientCore(String ip, int port) {
 		super();
@@ -68,6 +73,7 @@ public class ClientCore extends Thread{
 	 * @return
 	 */
 	public boolean sendComm(int id, String dir) {
+		//判断界面传过来的指令是否存在
 		boolean isCommExist = false;
 		for (int i  : files.keySet()) {
 			if(i == id){
@@ -77,11 +83,14 @@ public class ClientCore extends Thread{
 		if(isCommExist){
 			PrintStream ps;
 			try {
+				//发送下载指令
 				ps = new PrintStream(socket.getOutputStream());
 				ps.println(String.valueOf(id));
 				
-				//下载文件
-				download(dir,files.get(id));
+				//设置下载文件
+				this.dir = dir;
+				this.filename = files.get(id);
+				
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -90,19 +99,40 @@ public class ClientCore extends Thread{
 		return false;
 	}
 	
+	//界面访问的下载方法
+	public void startDownload() throws IOException{
+		download(dir,filename);
+	}
+	
 	//下载文件
 	private void download(String dir,String filename) throws IOException {
 		BufferedInputStream bis = new BufferedInputStream(socket.getInputStream());
 		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(new File(dir,filename)));
+		ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+		//取得所下载文件大小
+		fileSize = ois.readLong();
+		System.out.println("cc:文件下载的大小为"+fileSize+"MB");
+		
 		byte[] b = new byte[1024];
 		int len = 0;
-		download_status = 0;
-//		System.out.println("开始下载："+filename);
+		download_status = 2;//开始下载
 		while((len = bis.read(b)) != -1){
-			bos.write(b, 0, len);;
+			bos.write(b, 0, len);
+			download_status = 0;//正在下载
+			currentFileSize = currentFileSize +len/1024;
 		}
-		download_status = 1;
-//		System.out.println("下载完成！");
+		bos.close();
+		download_status = 1;//下载完成
+	}
+	
+	//提供给其他类获取文件长度
+	public long getFileSize(){
+		return fileSize;
+	}
+	
+	//
+	public int getCurrentFileSize(){
+		return currentFileSize;
 	}
 	
 	//获取下载情况

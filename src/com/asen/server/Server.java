@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.TreeMap;
@@ -27,6 +28,7 @@ public class Server extends Thread {
 	//取得共享文件夹中的文件名
 	private String[] filesName;
 	private TreeMap<Integer,String> files;
+	private File sendFile;//需要发送的文件
 	
 	public Server(Socket socket,File floder) {
 		super();
@@ -85,12 +87,17 @@ public class Server extends Thread {
 	 * @throws IOException 
 	 */
 	private void sendFile(String file) throws IOException{
-		File sendfile = new File(floder,file);
+		sendFile  = new File(floder,file);
 		BufferedOutputStream bos = new BufferedOutputStream(socket.getOutputStream());
-		BufferedInputStream bis = new BufferedInputStream(new FileInputStream(sendfile));
+		BufferedInputStream bis = new BufferedInputStream(new FileInputStream(sendFile));
+		ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+		long fileSize = sendFile.length()/(1024*1024);//文件大小
 		byte[] b = new byte[1024];
 		int len = 0;
-		System.out.println("文件开始传输");
+		//把文件大小传给客户端
+		oos.writeLong(fileSize);
+		oos.flush();
+		System.out.println("文件开始传输,文件大小:"+fileSize+"MB");
 		while((len = bis.read(b)) != -1){
 			bos.write(b, 0, len);
 		}
