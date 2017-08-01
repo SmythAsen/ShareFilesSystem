@@ -1,24 +1,23 @@
 package com.asen.client;
 
 import java.awt.Color;
+
 import javax.swing.JFrame;
 import javax.swing.JProgressBar;
 
-//检查当前下载状态
-//不断从ClientCore中获取到下载状态并设置到界面
-public class DownloadStatus extends Thread {
+public class DownloadUI implements Runnable {
 
 	private ClientCore cc; // 用于获取文件大小等数据
 	private ClientFrame cf; // 客户端界面类对象
 	private boolean stop = false;//是否停止线程
 	private JProgressBar pr; //进度条
 
-	public DownloadStatus(ClientCore cc, JFrame frame,JProgressBar pr) {
+	public DownloadUI(ClientCore cc, JFrame frame,JProgressBar pr) {
 		this.cc = cc;
 		this.cf =(ClientFrame) frame;
 		this.pr = pr;
 	}
-
+	
 	@Override
 	public void run() {
 		while (!stop) {

@@ -12,6 +12,9 @@ import java.net.UnknownHostException;
 import java.util.Set;
 import java.util.TreeMap;
 
+import javax.swing.JFrame;
+import javax.swing.JProgressBar;
+
 public class ClientCore extends Thread{
 
 	private String ip;
@@ -25,6 +28,8 @@ public class ClientCore extends Thread{
 	private String filename;//需要保存的文件
 	private static long fileSize;//下载文件的大小
 	private static int currentFileSize;
+	private JProgressBar pr;
+	private JFrame frame;
 	
 	public ClientCore(String ip, int port) {
 		super();
@@ -57,7 +62,6 @@ public class ClientCore extends Thread{
 					String s = id + ":" +files.get(id)+"\n";
 					filesName += s;
 				}
-//				System.out.println(filesName);
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -109,17 +113,23 @@ public class ClientCore extends Thread{
 		BufferedInputStream bis = new BufferedInputStream(socket.getInputStream());
 		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(new File(dir,filename)));
 		ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+		
 		//取得所下载文件大小
 		fileSize = ois.readLong();
 		System.out.println("cc:文件下载的大小为"+fileSize+"MB");
 		
 		byte[] b = new byte[1024];
 		int len = 0;
+//		new DownloadStatus(this,frame, pr).start(); //更新进度条UI方式3-失败
+		//更新主界面UI方式4,
+//		pr.setMaximum((int) fileSize);
+		
 		download_status = 2;//开始下载
 		while((len = bis.read(b)) != -1){
 			bos.write(b, 0, len);
 			download_status = 0;//正在下载
-			currentFileSize = currentFileSize +len/1024;
+			currentFileSize += len;
+//			pr.setValue(currentFileSize);
 		}
 		bos.close();
 		download_status = 1;//下载完成
@@ -132,11 +142,18 @@ public class ClientCore extends Thread{
 	
 	//
 	public int getCurrentFileSize(){
-		return currentFileSize;
+		return currentFileSize/1024/1024;
 	}
 	
 	//获取下载情况
 	public int getDownloadStatus(){
 		return download_status;
+	}
+
+	//取得客户端窗体和进度条
+	public void sendPF(JProgressBar pr,JFrame frame) {
+		this.pr = pr;
+		this.frame = frame;
+		
 	}
 }

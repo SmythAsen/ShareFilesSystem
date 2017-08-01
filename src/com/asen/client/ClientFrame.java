@@ -1,6 +1,5 @@
 package com.asen.client;
 
-import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
@@ -21,38 +20,45 @@ import javax.swing.JScrollPane;
 
 /**
  * 客户端界面
+ * 
  * @author Asen
  */
-public class ClientFrame extends JFrame {
+public class ClientFrame extends JFrame implements Runnable {
 
 	private static final long serialVersionUID = -8586211375465435563L;
-	private JTextField tf_ip; // 需要连接的服务器ip地址
-	private JTextField tf_port; // 需要连接的服务器接口
-	private JTextField tf_id; // 向服务器发送的下载指令id
-	private JTextField tf_savedir; // 保存文件的路径
-	private JButton btn_download;
-	private JButton btn_connect;
-	private JLabel label_isconnect; // 连接状态
-	private String filesName; // 服务器传输过来的文件
-	private JTextPane filelist; // 展示服务器传输过来的文件
-	private ClientCore cc;
-	private static JLabel isdownload; // 下载状态
-	private JProgressBar pr;
-	private static String ip; // 已经连接的服务器IP地址
-	private static int port; // 已经连接的服务器端口号
-	private JFrame frame;
-	
-	//设置文本框距离左边的基本距离
+	private JTextField tf_ip;			// 需要连接的服务器ip地址
+	private JTextField tf_port; 		// 需要连接的服务器接口
+	private JTextField tf_id;			// 向服务器发送的下载指令id
+	private JTextField tf_savedir; 		// 保存文件的路径
+	private JButton btn_download; 		// 下载按钮
+	private JButton btn_connect; 		// 连接按钮
+	private JLabel label_isconnect; 	// 连接状态
+	private String filesName; 			// 服务器传输过来的文件
+	private JTextPane filelist; 		// 展示服务器传输过来的文件
+	private ClientCore cc; 				// 客服端逻辑处理类
+	private static JLabel isdownload; 	// 下载状态
+	private JProgressBar pr; 			// 进度条
+	private static String ip;			// 已经连接的服务器IP地址
+	private static int port;			// 已经连接的服务器端口号
+	private JFrame frame;				// 当前窗体(用于其他方法获取)
+	// 设置文本框距离左边的基本距离
 	private Insets baseMargin = new Insets(0, 5, 0, 0);
-	
-	public void setFrame(JFrame frame){
+
+	private Thread thread;				//该线程用于更新进度条ui
+
+	//入口函数传入窗体，便于其他类的使用
+	public void setFrame(JFrame frame) {
 		this.frame = frame;
 	}
 	
+	public JFrame getFrame() {
+		return frame;
+	}
+
 	/**
 	 * 初始化窗体
 	 */
-	public ClientFrame( ) {
+	public ClientFrame() {
 		// 设置主窗体属性
 		setTitle("\u6587\u4EF6\u5171\u4EAB\u5BA2\u6237\u7AEF");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -60,39 +66,40 @@ public class ClientFrame extends JFrame {
 		setLocationRelativeTo(null);
 		getContentPane().setLayout(null);
 		getContentPane().setBackground(new Color(91, 155, 213));
-			
+
 		// 设置程序title
 		setAppTitle();
-		//初始化 IP、端口栏 
+		// 初始化 IP、端口栏
 		initIpandPort();
-		//初始化 连接栏
+		// 初始化 连接栏
 		initConnect();
-		//初始化  文件展示栏
+		// 初始化 文件展示栏
 		initShowfiles();
-		//初始化 文件选择 、存储 
+		// 初始化 文件选择 、存储
 		initSelectandDown();
-		//初始化 文件下载栏 
+		// 初始化 文件下载栏
 		initSlectDownloadFile();
 		// 为连接按钮添加监听事件
 		connectListener();
 		// 为下载按钮添加事件监听
 		downloadListener();
 	}
-	
-	//连接服务器
-	public void connectListener(){
+
+	// 连接服务器
+	public void connectListener() {
 		btn_connect.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				// 检验输入信息
-				if (!tf_ip.getText().trim().equals("") && !tf_port.getText().trim().equals("")) { //保证输入框有内容
-					ip = tf_ip.getText().trim();//将输入的ip地址传输到处理程序
-					port = Integer.parseInt(tf_port.getText().trim());//将输入的接口传入到处理程序
-					boolean isconnect = true;//打开连接开关
+				if (!tf_ip.getText().trim().equals("") && !tf_port.getText().trim().equals("")) { // 保证输入框有内容
+					ip = tf_ip.getText().trim();// 将输入的ip地址传输到处理程序
+					port = Integer.parseInt(tf_port.getText().trim());// 将输入的接口传入到处理程序
+					boolean isconnect = true;// 打开连接开关
 					try {
 						// 连接服务器
 						cc = new ClientCore(ip, port);
 						cc.connect();
+						cc.sendPF(pr,frame);//将进度条，和目前窗体传给逻辑处理类
 					} catch (UnknownHostException e1) {
 						isconnect = false;
 					} catch (IOException e1) {
@@ -102,10 +109,8 @@ public class ClientFrame extends JFrame {
 						label_isconnect.setText("连接成功！");
 						label_isconnect.setForeground(Color.GREEN);
 						// 连接成功后将服务器传输过来的内容展示在客户端上面
-						filesName = cc.getFilesName();
-						// System.out.println("客户端传输过来的内容:" + filesName);
-						filelist.setText("客户端传输过来的内容:\n" + filesName);
-
+						filesName = cc.getFilesName();//获取文件列表
+						filelist.setText("服务器文件:\n" + filesName);//展示文件列表
 					} else {
 						JOptionPane.showMessageDialog(null, "IP地址或端口号错误", "连接错误", JOptionPane.ERROR_MESSAGE);
 						label_isconnect.setText("连接失败！");
@@ -118,9 +123,9 @@ public class ClientFrame extends JFrame {
 		});
 
 	}
-	
-	//下载文件
-	public void downloadListener(){
+
+	// 下载文件
+	public void downloadListener() {
 		btn_download.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -135,10 +140,17 @@ public class ClientFrame extends JFrame {
 					if ((tf_id.getText().trim()).matches("^\\d*$")) {
 						// 如果通過CilentCore的验证，则下载该文件,下载文件逻辑交给ClientCore
 						if (cc.sendComm(comm, dir)) {
-							//启动监控下载的线程
-							new DownloadStatus(ip, port,frame).start();
-							//启动监听下载进度条的线程
-							new ProgressUI(pr,isdownload).start();
+							
+							// 启动监控下载的线程(方式1)-失败
+//							thread = new Thread((Runnable) frame);//将当前窗体做为线程启动
+//							thread.start();
+//							new Thread((Runnable) frame).start();
+							
+							// 启动监听下载进度条的线程(方式2)-失败
+//							 new DownloadStatus(cc,frame,pr).start();
+							
+							// 启动监听下载进度条的线程(方式2)-失败
+							new Thread(new DownloadUI(cc, frame, pr)).start();
 							try {
 								// 下载文件
 								cc.startDownload();
@@ -158,9 +170,9 @@ public class ClientFrame extends JFrame {
 			}
 		});
 	}
-	
-	//设置下横须标题
-	public void setAppTitle(){
+
+	// 设置下横须标题
+	public void setAppTitle() {
 		JPanel Title_panel = new JPanel();
 		Title_panel.setBounds(0, 13, 582, 50);
 		Title_panel.setBackground(new Color(91, 155, 213));
@@ -170,29 +182,29 @@ public class ClientFrame extends JFrame {
 		Title_panel.add(Title_label);
 		getContentPane().add(Title_panel);
 	}
-	
+
 	/********** IP、端口栏 **********/
-	public void initIpandPort(){
-		//ip标签
+	public void initIpandPort() {
+		// ip标签
 		JLabel label_ip = new JLabel("\u670D\u52A1\u5668IP\uFF1A");
 		label_ip.setHorizontalAlignment(SwingConstants.CENTER);
 		label_ip.setFont(new Font("微软雅黑", Font.PLAIN, 18));
 		label_ip.setBounds(28, 90, 94, 28);
 		getContentPane().add(label_ip);
-		//ip输入框
+		// ip输入框
 		tf_ip = new JTextField();
 		tf_ip.setFont(new Font("宋体", Font.PLAIN, 16));
 		tf_ip.setHorizontalAlignment(SwingConstants.LEFT);
 		tf_ip.setBounds(126, 90, 216, 28);
 		tf_ip.setMargin(baseMargin);
 		getContentPane().add(tf_ip);
-		//端口标签
+		// 端口标签
 		JLabel label_port = new JLabel("\u7AEF\u53E3\u53F7\uFF1A");
 		label_port.setHorizontalAlignment(SwingConstants.CENTER);
 		label_port.setFont(new Font("微软雅黑", Font.PLAIN, 18));
 		label_port.setBounds(356, 90, 87, 28);
 		getContentPane().add(label_port);
-		//端口输入框
+		// 端口输入框
 		tf_port = new JTextField();
 		tf_port.setFont(new Font("宋体", Font.PLAIN, 16));
 		tf_port.setHorizontalAlignment(SwingConstants.LEFT);
@@ -201,9 +213,9 @@ public class ClientFrame extends JFrame {
 		tf_port.setMargin(baseMargin);
 		getContentPane().add(tf_port);
 	}
-	
-	//连接栏
-	public void initConnect(){
+
+	// 连接栏
+	public void initConnect() {
 		btn_connect = new JButton("\u8FDE \u63A5");
 		btn_connect.setFont(new Font("微软雅黑", Font.PLAIN, 16));
 		btn_connect.setBounds(243, 152, 99, 27);
@@ -222,16 +234,16 @@ public class ClientFrame extends JFrame {
 		JLabel label_line = new JLabel("------------------------------------------------------");
 		label_line.setBounds(14, 152, 233, 28);
 		getContentPane().add(label_line);
-		
+
 	}
-	
-	public void initShowfiles(){
-		//设置标题
+
+	public void initShowfiles() {
+		// 设置标题
 		JLabel label = new JLabel("\u670D\u52A1\u7AEF\u5171\u4EAB\u7684\u6587\u4EF6");
 		label.setFont(new Font("微软雅黑", Font.PLAIN, 18));
 		label.setBounds(223, 216, 159, 18);
 		getContentPane().add(label);
-		
+
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setBounds(14, 247, 565, 220);
 		getContentPane().add(scrollPane);
@@ -240,10 +252,10 @@ public class ClientFrame extends JFrame {
 		filelist.setEditable(false);
 		filelist.setMargin(baseMargin);
 		scrollPane.setViewportView(filelist);
-		
+
 	}
-	
-	public void initSelectandDown(){
+
+	public void initSelectandDown() {
 		JLabel lblid = new JLabel("\u6587\u4EF6ID\uFF1A");
 		lblid.setHorizontalAlignment(SwingConstants.CENTER);
 		lblid.setFont(new Font("微软雅黑", Font.PLAIN, 18));
@@ -272,17 +284,18 @@ public class ClientFrame extends JFrame {
 		tf_savedir.setMargin(baseMargin);
 		getContentPane().add(tf_savedir);
 	}
-	
-	public void initSlectDownloadFile(){
-		
+
+	public void initSlectDownloadFile() {
+
 		btn_download = new JButton("\u4E0B \u8F7D");
 		btn_download.setFont(new Font("微软雅黑", Font.PLAIN, 16));
 		btn_download.setBounds(14, 555, 99, 31);
 		getContentPane().add(btn_download);
-		//进度条
+		// 进度条
 		pr = new JProgressBar();
 		pr.setBounds(126, 556, 291, 30);
-		pr.setStringPainted(true);//设置提示信息
+		pr.setStringPainted(true);// 设置提示信息
+		pr.setForeground(new Color(0, 165, 0));
 		getContentPane().add(pr);
 
 		JLabel label_download_satus = new JLabel("\u4E0B\u8F7D\u72B6\u6001\uFF1A");
@@ -295,7 +308,7 @@ public class ClientFrame extends JFrame {
 		isdownload.setBounds(501, 558, 81, 24);
 		getContentPane().add(isdownload);
 	}
-	
+
 	// 下载错误提示框
 	public void downloadErr(String errMsg) {
 		JOptionPane.showMessageDialog(null, errMsg, "下载错误", JOptionPane.ERROR_MESSAGE);
@@ -304,23 +317,54 @@ public class ClientFrame extends JFrame {
 	public JLabel getIsdownload() {
 		return isdownload;
 	}
+	
+	//更新进度条UI
+	@Override
+	public void run() {
+		boolean stop = false;// 是否停止线程
+		while (!stop) {
+			pr.setMaximum((int) cc.getFileSize());// 将进度条的最大值设置为文件大大小
 
-	/**
-	 * 启动程序
-	 */
-	public static void main(String[] args) {
-
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					ClientFrame frame = new ClientFrame();
-					frame.setResizable(false);
-					frame.setFrame(frame);
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+			System.out.println("文件总大小--->" + cc.getFileSize() + "MB");
+			System.out.println("当前下载文件大小--->" + cc.getCurrentFileSize() + "MB");
+			// 取得下载状态
+			System.out.println("下载状态---->" + cc.getDownloadStatus());
+			switch (cc.getDownloadStatus()) {
+			case 0:
+				isdownload.setText("正在下载..");
+				isdownload.setForeground(Color.ORANGE);
+				pr.setValue(cc.getCurrentFileSize());
+				break;
+			case 1:
+				isdownload.setText("下载完成！");
+				isdownload.setForeground(Color.GREEN);
+				pr.setValue(cc.getCurrentFileSize());
+				stop = true;
+				break;
+			case -1:
+				isdownload.setText("下载失败！");
+				isdownload.setForeground(Color.RED);
+				stop = true;
+				break;
+			case 2:
+				isdownload.setText("开始下载");
+				isdownload.setForeground(Color.GREEN);
+				break;
 			}
-		});
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
+
+	/* 启动程序 */
+	public static void main(String[] args) {
+		ClientFrame frame = new ClientFrame();
+		frame.setResizable(false);
+		frame.setFrame(frame); // 将此frame传给线程
+		frame.setVisible(true);
 	}
 }
