@@ -8,9 +8,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
-import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
 import java.util.TreeMap;
 
 /**
@@ -87,23 +87,24 @@ public class Server extends Thread {
 	 * @throws IOException 
 	 */
 	private void sendFile(String file) throws IOException{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyy-MM-dd HH:mm:dd");
 		sendFile  = new File(floder,file);
 		BufferedOutputStream bos = new BufferedOutputStream(socket.getOutputStream());
 		BufferedInputStream bis = new BufferedInputStream(new FileInputStream(sendFile));
 		ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-		long fileSize = sendFile.length()/(1024*1024);//文件大小
+		long fileSize = sendFile.length();//文件大小
 		byte[] b = new byte[1024];
 		int len = 0;
 		//把文件大小传给客户端
 		oos.writeLong(fileSize);
 		oos.flush();
-		System.out.println("文件开始传输,文件大小:"+fileSize+"MB");
+		System.out.println("文件开始传输,文件大小:"+fileSize);
 		while((len = bis.read(b)) != -1){
 			bos.write(b, 0, len);
 		}
 		bis.close();
 		bos.close();
-		System.out.println("文件传输完成！");
+		System.out.println(sdf.format(System.currentTimeMillis())+":文件传输完成！");
 	}
 	
 	

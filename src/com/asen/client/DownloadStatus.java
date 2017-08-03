@@ -1,4 +1,4 @@
-package com.asen.client;
+/*package com.asen.client;
 
 import java.awt.Color;
 import javax.swing.JFrame;
@@ -28,7 +28,7 @@ public class DownloadStatus extends Thread {
 			System.out.println("当前下载文件大小--->"+cc.getCurrentFileSize()+"MB");
 			//取得下载状态
 			System.out.println("下载状态---->"+cc.getDownloadStatus());
-			switch (cc.getDownloadStatus()) {
+//			switch (cc.getDownloadStatus()) {
 			case 0:
 				cf.getIsdownload().setText("正在下载..");
 				cf.getIsdownload().setForeground(Color.ORANGE);
@@ -59,3 +59,4 @@ public class DownloadStatus extends Thread {
 	}
 
 }
+*/

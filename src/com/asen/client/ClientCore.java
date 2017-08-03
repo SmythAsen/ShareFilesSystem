@@ -12,10 +12,7 @@ import java.net.UnknownHostException;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.swing.JFrame;
-import javax.swing.JProgressBar;
-
-public class ClientCore extends Thread{
+public class ClientCore{
 
 	private String ip;
 	private int port;
@@ -23,23 +20,15 @@ public class ClientCore extends Thread{
 	private boolean isconnect = false;
 	private TreeMap<Integer, String> files;
 	//向Client页面反馈下载情况，0，表示正在下载，1表示下载完成，-1表示下载失败,2开始下载,5是默认值，表示还没有下载任务
-	private static int download_status = 5; 
 	private String dir;//文件保存的路径(来自界面)
 	private String filename;//需要保存的文件
-	private static long fileSize;//下载文件的大小
-	private static int currentFileSize;
-	private JProgressBar pr;
-	private JFrame frame;
+	private long fileSize;//下载文件的大小
+	private  int currentFileSize;
 	
 	public ClientCore(String ip, int port) {
 		super();
 		this.ip = ip;
 		this.port = port;
-	}
-
-	@Override
-	public void run() {
-
 	}
 	
 	//连接到服务器
@@ -116,23 +105,14 @@ public class ClientCore extends Thread{
 		
 		//取得所下载文件大小
 		fileSize = ois.readLong();
-		System.out.println("cc:文件下载的大小为"+fileSize+"MB");
-		
+		System.out.println("cc:文件下载的大小为"+fileSize);
 		byte[] b = new byte[1024];
 		int len = 0;
-//		new DownloadStatus(this,frame, pr).start(); //更新进度条UI方式3-失败
-		//更新主界面UI方式4,
-//		pr.setMaximum((int) fileSize);
-		
-		download_status = 2;//开始下载
 		while((len = bis.read(b)) != -1){
 			bos.write(b, 0, len);
-			download_status = 0;//正在下载
 			currentFileSize += len;
-//			pr.setValue(currentFileSize);
 		}
 		bos.close();
-		download_status = 1;//下载完成
 	}
 	
 	//提供给其他类获取文件长度
@@ -140,20 +120,7 @@ public class ClientCore extends Thread{
 		return fileSize;
 	}
 	
-	//
 	public int getCurrentFileSize(){
-		return currentFileSize/1024/1024;
-	}
-	
-	//获取下载情况
-	public int getDownloadStatus(){
-		return download_status;
-	}
-
-	//取得客户端窗体和进度条
-	public void sendPF(JProgressBar pr,JFrame frame) {
-		this.pr = pr;
-		this.frame = frame;
-		
+		return currentFileSize;
 	}
 }
