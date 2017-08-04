@@ -38,6 +38,7 @@ public class ClientCore{
 	}
 
 	//获取从服务器传输过来的文件名
+	@SuppressWarnings("unchecked")
 	public String getFilesName() {
 		String filesName = "";
 		if(isconnect){
@@ -85,7 +86,7 @@ public class ClientCore{
 				this.filename = files.get(id);
 				
 			} catch (IOException e) {
-				e.printStackTrace();
+				return false;
 			}
 			return true;
 		}
@@ -94,7 +95,15 @@ public class ClientCore{
 	
 	//界面访问的下载方法
 	public void startDownload() throws IOException{
-		download(dir,filename);
+		new Thread() {
+			public void run() {
+				try {
+					download(dir,filename);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			};
+		}.start();
 	}
 	
 	//下载文件

@@ -116,7 +116,11 @@ public class Server extends Thread {
 		Socket socket = null;
 		while (true) {
 			//监听客户端连接
-			socket = ss.accept();
+			try {
+				socket = ss.accept();
+			} catch (IOException e) {
+				System.out.println("客服端断开连接,IP地址为"+socket.getInetAddress().getHostAddress());
+			}
 			System.out.println("客户端已连接："+socket.getInetAddress().getHostAddress());
 			new Server(socket,floder).start();//针对每一个连接的客户端单独开启一个线程
 		}

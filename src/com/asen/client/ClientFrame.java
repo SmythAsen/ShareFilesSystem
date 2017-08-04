@@ -5,7 +5,6 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import java.awt.Color;
 import java.awt.Cursor;
-
 import javax.swing.JTextField;
 import java.awt.Font;
 import java.awt.Insets;
@@ -14,7 +13,6 @@ import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
-import java.net.UnknownHostException;
 import javax.swing.SwingConstants;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -24,12 +22,14 @@ import javax.swing.JScrollPane;
 
 /**
  * 客户端界面
- * 
+ * 用户输入服务器ip地址和端口号并进行连接
+ * 连接成功后选择下载的文件进行下载
  * @author Asen
  */
 public class ClientFrame extends JFrame implements ActionListener, PropertyChangeListener {
 
 	private static final long serialVersionUID = -8586211375465435563L;
+
 	private JTextField tf_ip; // 需要连接的服务器ip地址
 	private JTextField tf_port; // 需要连接的服务器接口
 	private JTextField tf_id; // 向服务器发送的下载指令id
@@ -44,7 +44,8 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 	private JProgressBar pr; // 进度条
 	private static String ip; // 已经连接的服务器IP地址
 	private static int port; // 已经连接的服务器端口号
-	private DownloadTask task;
+	private DownloadTask task; // 下载任务更新UI进度条
+	private boolean isconnected = false;// 打开连接开关
 	// 设置文本框距离左边的基本距离
 	private Insets baseMargin = new Insets(0, 5, 0, 0);
 
@@ -59,45 +60,41 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 
 	// 当用户点击下载按钮时执行
 	@Override
-	public void actionPerformed(ActionEvent arg0) {
-		// 检验选择的指令是否存在，路径是否正确
-		int comm = 0;
-		String dir = null;
-		// 首先检验时候有输入id和路径
-		if (!"".equals(tf_id.getText().trim()) && !"".equals(tf_savedir.getText().trim())) {
-			comm = Integer.parseInt(tf_id.getText().trim());
-			dir = tf_savedir.getText().trim();
-			// 将验证工作交给类ClientCore处理
-			if ((tf_id.getText().trim()).matches("^\\d*$")) {
-				// 如果通過CilentCore的验证，则下载该文件,下载文件逻辑交给ClientCore
-				if (cc.sendComm(comm, dir)) {
-					// try {
-					btn_download.setEnabled(false);
-					setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-					task = new DownloadTask(ClientFrame.this, cc, btn_download, pr, isdownload);
-					task.addPropertyChangeListener(this);
-					task.execute();
-					new Thread() {
-						public void run() {
-							try {
-								cc.startDownload();
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						};
-					}.start();
-					
+	public void actionPerformed(ActionEvent evt) {
+		if (isconnected) {
+			// 检验选择的指令是否存在，路径是否正确
+			int comm = 0;
+			String dir = null;
+			// 首先检验时候有输入id和路径
+			if (!"".equals(tf_id.getText().trim()) && !"".equals(tf_savedir.getText().trim())) {
+				// 将验证工作交给类ClientCore处理
+				if (tf_id.getText().trim().matches("^\\d*$")) { // 判断文件id是否为数字
+					comm = Integer.parseInt(tf_id.getText().trim());
+					dir = tf_savedir.getText().trim();
+					// 如果通過CilentCore的验证，则下载该文件,下载文件逻辑交给ClientCore
+					if (cc.sendComm(comm, dir)) { // 判断指令是否正确
+						try {
+							cc.startDownload();
+						} catch (IOException e) {
+							// TODO 处理下载错误逻辑...
+							e.printStackTrace();
+						}
+						// 监控下载进度，此处应该判断，当文件下载遇到错误是如何处理//TODO
+						btn_download.setEnabled(false);
+						setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+						task = new DownloadTask(ClientFrame.this, cc, btn_download, pr, isdownload);
+						task.addPropertyChangeListener(this);
+						task.execute();
+					}
 				} else {
-					// 否则输入的指令不对
 					downloadErr("请输入正确指令");
 				}
 			} else {
-				downloadErr("请输入正确指令");
+				downloadErr("请输入下载指令或下载路径");
 			}
 		} else {
-			downloadErr("请输入下载指令或下载路径");
+			downloadErr("请先连接服务器");
 		}
-
 	}
 
 	/**
@@ -126,42 +123,38 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 		initSlectDownloadFile();
 		// 为连接按钮添加监听事件
 		connectListener();
-		// 为下载按钮添加事件监听
-		// downloadListener();
 	}
 
 	// 连接服务器
 	public void connectListener() {
 		btn_connect.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(ActionEvent evt) {
 				// 检验输入信息
 				if (!tf_ip.getText().trim().equals("") && !tf_port.getText().trim().equals("")) { // 保证输入框有内容
-					ip = tf_ip.getText().trim();// 将输入的ip地址传输到处理程序
-					port = Integer.parseInt(tf_port.getText().trim());// 将输入的接口传入到处理程序
-					boolean isconnect = true;// 打开连接开关
-					try {
-						// 连接服务器
-						cc = new ClientCore(ip, port);
-						cc.connect();
-					} catch (UnknownHostException e1) {
-						isconnect = false;
-					} catch (IOException e1) {
-						isconnect = false;
+					if (tf_port.getText().trim().matches("^\\d*$")) {// 判断端口输入框内容是否为数字
+						ip = tf_ip.getText().trim(); // 将输入的ip地址传输到处理程序
+						port = Integer.parseInt(tf_port.getText().trim());// 将输入的接口传入到处理程序
+						try {
+							// 连接服务器
+							cc = new ClientCore(ip, port);
+							cc.connect();
+							isconnected = true;
+						} catch (IOException e) {
+							isconnected = false;
+						}
 					}
-					if (isconnect) {
+					if (isconnected) {
 						label_isconnect.setText("连接成功！");
 						label_isconnect.setForeground(Color.GREEN);
 						// 连接成功后将服务器传输过来的内容展示在客户端上面
 						filesName = cc.getFilesName();// 获取文件列表
 						filelist.setText("服务器文件:\n" + filesName);// 展示文件列表
 					} else {
-						JOptionPane.showMessageDialog(null, "IP地址或端口号错误", "连接错误", JOptionPane.ERROR_MESSAGE);
-						label_isconnect.setText("连接失败！");
-						label_isconnect.setForeground(new Color(255, 0, 0));
+						connectErr(label_isconnect, "IP地址或端口号错误！");
 					}
 				} else {
-					JOptionPane.showMessageDialog(null, "请输入IP地址或端口号", "连接错误", JOptionPane.ERROR_MESSAGE);
+					connectErr(label_isconnect, "请输入IP地址或端口号！");
 				}
 			}
 		});
@@ -296,6 +289,7 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 		pr = new JProgressBar();
 		pr.setBounds(126, 556, 291, 30);
 		pr.setStringPainted(true);// 设置提示信息
+		pr.setString("当前没有下载任务");
 		pr.setForeground(new Color(0, 165, 0));
 		getContentPane().add(pr);
 
@@ -315,8 +309,11 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 		JOptionPane.showMessageDialog(null, errMsg, "下载错误", JOptionPane.ERROR_MESSAGE);
 	}
 
-	public JLabel getIsdownload() {
-		return isdownload;
+	// 连接错误提示框
+	public void connectErr(JLabel label_isconnect, String errMsg) {
+		JOptionPane.showMessageDialog(null, errMsg, "连接错误", JOptionPane.ERROR_MESSAGE);
+		label_isconnect.setText("连接失败！");
+		label_isconnect.setForeground(new Color(255, 0, 0));
 	}
 
 	public static void createAndShowGUI() {

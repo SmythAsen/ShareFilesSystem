@@ -10,6 +10,10 @@ import javax.swing.JLabel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingWorker;
 
+/**
+ * 为客户端下载提供的委托事件，用于更新进度条
+ * @author Asen
+ */
 public class DownloadTask extends SwingWorker<Void, Void> {
 
 	private JFrame frame;
@@ -27,7 +31,7 @@ public class DownloadTask extends SwingWorker<Void, Void> {
 	}
 
 	/*
-	 * Main task. Executed in background thread.
+	 * 主要任务，当现场启动后，会在后台运行
 	 */
 	@Override
 	public Void doInBackground() {
@@ -41,9 +45,10 @@ public class DownloadTask extends SwingWorker<Void, Void> {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		//获得进度条的最大值
 		long total = cc.getFileSize();
 		pr.setMinimum(0);
-		pr.setMaximum((int) cc.getFileSize());
+		pr.setMaximum((int) total);
 		String tip = "";
 		while (progress < total) {
 			progress = cc.getCurrentFileSize();
@@ -64,8 +69,8 @@ public class DownloadTask extends SwingWorker<Void, Void> {
 		isdownload.setText("下载完成");
 		pr.setString("下载完成,文件大小:"+cc.getFileSize()/(1024*1024)+"MB");
 		isdownload.setForeground(Color.GREEN);
-		Toolkit.getDefaultToolkit().beep();
+		Toolkit.getDefaultToolkit().beep(); //下载完成后发出提示音
 		btn_download.setEnabled(true);
-		frame.setCursor(null); // turn off the wait cursor
+		frame.setCursor(null); // 关闭鼠标等待状态
 	}
 }
