@@ -29,11 +29,13 @@ public class Server extends Thread {
 	private String[] filesName;
 	private TreeMap<Integer,String> files;
 	private File sendFile;//需要发送的文件
+	private String ip;
 	
 	public Server(Socket socket,File floder) {
 		super();
 		this.floder = floder;
 		this.socket = socket;
+		this.ip = socket.getInetAddress().getHostAddress();
 	}
 	
 	@Override
@@ -107,6 +109,9 @@ public class Server extends Thread {
 		System.out.println(sdf.format(System.currentTimeMillis())+":文件传输完成！");
 	}
 	
+	public String getIP(){
+		return this.ip;
+	}
 	
 	public static void main(String[] args) throws IOException {
 		File floder = new File("H:\\电影");

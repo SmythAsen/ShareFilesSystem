@@ -21,9 +21,8 @@ import javax.swing.JTextPane;
 import javax.swing.JScrollPane;
 
 /**
- * 客户端界面
- * 用户输入服务器ip地址和端口号并进行连接
- * 连接成功后选择下载的文件进行下载
+ * 客户端界面 用户输入服务器ip地址和端口号并进行连接 连接成功后选择下载的文件进行下载
+ * 
  * @author Asen
  */
 public class ClientFrame extends JFrame implements ActionListener, PropertyChangeListener {
@@ -49,6 +48,19 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 	// 设置文本框距离左边的基本距离
 	private Insets baseMargin = new Insets(0, 5, 0, 0);
 
+	/**
+	 * 初始化窗体
+	 */
+	public ClientFrame() {
+		initFrame();// 设置主窗体属性
+		setAppTitle();// 设置程序title
+		initIpandPort();// 初始化 IP、端口栏
+		initConnect();// 初始化 连接栏
+		initShowfiles();// 初始化 文件展示栏
+		initSelectandDown();// 初始化 文件选择 、存储
+		initSlectDownloadFile();// 初始化 文件下载栏
+	}
+
 	// 当进度条值改变时执行
 	@Override
 	public void propertyChange(PropertyChangeEvent evt) {
@@ -58,107 +70,90 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 		}
 	}
 
-	// 当用户点击下载按钮时执行
+	//添加按钮事件
 	@Override
 	public void actionPerformed(ActionEvent evt) {
-		if (isconnected) {
-			// 检验选择的指令是否存在，路径是否正确
-			int comm = 0;
-			String dir = null;
-			// 首先检验时候有输入id和路径
-			if (!"".equals(tf_id.getText().trim()) && !"".equals(tf_savedir.getText().trim())) {
-				// 将验证工作交给类ClientCore处理
-				if (tf_id.getText().trim().matches("^\\d*$")) { // 判断文件id是否为数字
-					comm = Integer.parseInt(tf_id.getText().trim());
-					dir = tf_savedir.getText().trim();
-					// 如果通過CilentCore的验证，则下载该文件,下载文件逻辑交给ClientCore
-					if (cc.sendComm(comm, dir)) { // 判断指令是否正确
-						try {
-							cc.startDownload();
-						} catch (IOException e) {
-							// TODO 处理下载错误逻辑...
-							e.printStackTrace();
-						}
-						// 监控下载进度，此处应该判断，当文件下载遇到错误是如何处理//TODO
-						btn_download.setEnabled(false);
-						setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-						task = new DownloadTask(ClientFrame.this, cc, btn_download, pr, isdownload);
-						task.addPropertyChangeListener(this);
-						task.execute();
+		String s = evt.getActionCommand();
+		/**
+		 *  当用户点击连接按钮时执行
+		 */
+		if ("connect".equals(s)) {
+			// 检验输入信息
+			if (!tf_ip.getText().trim().equals("") && !tf_port.getText().trim().equals("")) { // 保证输入框有内容
+				if (tf_port.getText().trim().matches("^\\d*$")) {// 判断端口输入框内容是否为数字
+					ip = tf_ip.getText().trim(); // 将输入的ip地址传输到处理程序
+					port = Integer.parseInt(tf_port.getText().trim());// 将输入的接口传入到处理程序
+					try {
+						// 连接服务器
+						cc = new ClientCore(ip, port);
+						cc.connect();
+						isconnected = true;
+					} catch (IOException e) {
+						isconnected = false;
 					}
+				}
+				if (isconnected) {
+					label_isconnect.setText("连接成功！");
+					label_isconnect.setForeground(Color.GREEN);
+					// 连接成功后将服务器传输过来的内容展示在客户端上面
+					filesName = cc.getFilesName();// 获取文件列表
+					filelist.setText("服务器文件:\n" + filesName);// 展示文件列表
 				} else {
-					downloadErr("请输入正确指令");
+					connectErr(label_isconnect, "IP地址或端口号错误！");
 				}
 			} else {
-				downloadErr("请输入下载指令或下载路径");
+				connectErr(label_isconnect, "请输入IP地址或端口号！");
 			}
-		} else {
-			downloadErr("请先连接服务器");
+
+			/**
+			 * 当用户点击下载按钮时执行
+			 */
+		} else if ("download".equals(s)) { 
+			if (isconnected) {
+				// 检验选择的指令是否存在，路径是否正确
+				int comm = 0;
+				String dir = null;
+				// 首先检验时候有输入id和路径
+				if (!"".equals(tf_id.getText().trim()) && !"".equals(tf_savedir.getText().trim())) {
+					// 将验证工作交给类ClientCore处理
+					if (tf_id.getText().trim().matches("^\\d*$")) { // 判断文件id是否为数字
+						comm = Integer.parseInt(tf_id.getText().trim());
+						dir = tf_savedir.getText().trim();
+						// 如果通過CilentCore的验证，则下载该文件,下载文件逻辑交给ClientCore
+						if (cc.sendComm(comm, dir)) { // 判断指令是否正确
+							try {
+								cc.startDownload();
+							} catch (IOException e) {
+								// TODO 处理下载错误逻辑...
+								e.printStackTrace();
+							}
+							// 监控下载进度，此处应该判断，当文件下载遇到错误是如何处理//TODO
+							btn_download.setEnabled(false);
+							setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+							task = new DownloadTask(ClientFrame.this, cc, btn_download, pr, isdownload);
+							task.addPropertyChangeListener(this);
+							task.execute();
+						}
+					} else {
+						downloadErr("请输入正确指令");
+					}
+				} else {
+					downloadErr("请输入下载指令或下载路径");
+				}
+			} else {
+				downloadErr("请先连接服务器");
+			}
 		}
 	}
 
-	/**
-	 * 初始化窗体
-	 */
-	public ClientFrame() {
-		// 设置主窗体属性
+	// 初始化窗体
+	public void initFrame() {
 		setTitle("\u6587\u4EF6\u5171\u4EAB\u5BA2\u6237\u7AEF");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 600, 680);
 		setLocationRelativeTo(null);
 		getContentPane().setLayout(null);
 		getContentPane().setBackground(new Color(91, 155, 213));
-
-		// 设置程序title
-		setAppTitle();
-		// 初始化 IP、端口栏
-		initIpandPort();
-		// 初始化 连接栏
-		initConnect();
-		// 初始化 文件展示栏
-		initShowfiles();
-		// 初始化 文件选择 、存储
-		initSelectandDown();
-		// 初始化 文件下载栏
-		initSlectDownloadFile();
-		// 为连接按钮添加监听事件
-		connectListener();
-	}
-
-	// 连接服务器
-	public void connectListener() {
-		btn_connect.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent evt) {
-				// 检验输入信息
-				if (!tf_ip.getText().trim().equals("") && !tf_port.getText().trim().equals("")) { // 保证输入框有内容
-					if (tf_port.getText().trim().matches("^\\d*$")) {// 判断端口输入框内容是否为数字
-						ip = tf_ip.getText().trim(); // 将输入的ip地址传输到处理程序
-						port = Integer.parseInt(tf_port.getText().trim());// 将输入的接口传入到处理程序
-						try {
-							// 连接服务器
-							cc = new ClientCore(ip, port);
-							cc.connect();
-							isconnected = true;
-						} catch (IOException e) {
-							isconnected = false;
-						}
-					}
-					if (isconnected) {
-						label_isconnect.setText("连接成功！");
-						label_isconnect.setForeground(Color.GREEN);
-						// 连接成功后将服务器传输过来的内容展示在客户端上面
-						filesName = cc.getFilesName();// 获取文件列表
-						filelist.setText("服务器文件:\n" + filesName);// 展示文件列表
-					} else {
-						connectErr(label_isconnect, "IP地址或端口号错误！");
-					}
-				} else {
-					connectErr(label_isconnect, "请输入IP地址或端口号！");
-				}
-			}
-		});
-
 	}
 
 	// 设置下横须标题
@@ -211,6 +206,8 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 		btn_connect = new JButton("\u8FDE \u63A5");
 		btn_connect.setFont(new Font("微软雅黑", Font.PLAIN, 16));
 		btn_connect.setBounds(243, 152, 99, 27);
+		btn_connect.setActionCommand("connect");
+		btn_connect.addActionListener(this);
 		getContentPane().add(btn_connect);
 
 		JLabel label_connect_status = new JLabel("\u8FDE\u63A5\u72B6\u6001\uFF1A");
@@ -283,6 +280,7 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 		btn_download = new JButton("\u4E0B \u8F7D");
 		btn_download.setFont(new Font("微软雅黑", Font.PLAIN, 16));
 		btn_download.setBounds(14, 555, 99, 31);
+		btn_download.setActionCommand("download");
 		btn_download.addActionListener(this);
 		getContentPane().add(btn_download);
 		// 进度条
@@ -332,5 +330,4 @@ public class ClientFrame extends JFrame implements ActionListener, PropertyChang
 			}
 		});
 	}
-
 }
